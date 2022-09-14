@@ -12,8 +12,6 @@ const numbersBtns = document.querySelectorAll('.calculator_item__number');
 const operationsBtns = document.querySelectorAll('.calculator_item__operation');
 const errorText = document.querySelector('.calculator_error')
 
-console.log(errorText.style)
-
 // обработчики
 // кнопки расчета '=', удаления последнего числа '<=', полной очистки (сброс всего) 'C'
 calculateBtn.addEventListener('click', calculate);
@@ -42,21 +40,24 @@ let isLastSelectOperation = false;
 let isLastSelectNumber = false;
 // если был показан текст при делении на 0
 let isLastError = false;
+// пометка, что последний раз был произведен расчет с процентами, нужно для обработки редкого бага с расчетом %
+let isLastPercentOperation = false;
 
 numberInput.textContent = 0;
 
 function selectNumber(event){
-  
-  console.log(`%c${'selectNumber:'}`, `color: ${'#FFFF00'}`);
-  console.log(`selectNumber Вход, prevNumber: ${previousNumber} number: ${number} operation: ${operation} isLastEqualOperation: ${isLastEqualOperation}`)
 
+  if(isLastPercentOperation && isLastSelectOperation && operation === '%'){
+    clear()
+  }
+  
   // если была ошибка, все отчищаем
   if (isLastError) {
     clear()
   }
 
-  // если после знака равенства нажали на выбор цифр, все очищаем
-  if (isLastEqualOperation){
+  // если после знака равенства или после операции с процентами нажали на выбор цифр, все очищаем
+  if (isLastEqualOperation || isLastPercentOperation){
     clear()
   }
 
@@ -91,19 +92,22 @@ function selectNumber(event){
     number = lengthOfNumbersAfterDot[0].slice(0, -1)
   }
 
-  updateNodes(operation, parseFloat(number), previousNumber || '')
+  // просто для красоты в начале если нажали +, а потом набираем цифру то 0 сверху будет видно на экране
+  if (operation) {
+    updateNodes(operation, number, previousNumber)
+  } else {
+    updateNodes(operation, number, previousNumber || '')
+  }
+
   
   isLastSelectNumber = true;
   // обрабатывает размер текста с учетом количества цифр
   
-
   changeSizeOfText()
-  console.log(`selectNumber Выход, prevNumber: ${previousNumber} number: ${number} operation: ${operation}`)
 }
 
+// функция выбора одной из операций +,-,*,/,%
 function selectOperation(event) {
-  console.log(`%c${'selectOperation:'}`, `color: ${'#DA70D6'}`);
-  console.log(`selectOperation Вход, prevNumber: ${previousNumber} number: ${number} operation: ${operation}`)
 
   if (isLastError) {
     clear()
@@ -116,10 +120,15 @@ function selectOperation(event) {
 
   // в случае если lastOperator есть и нажали на %, значит сделать расчет с %.
   if (lastOperation && event.target.textContent === '%'){
-    console.log('lastOperation', lastOperation)
-    console.log('Заход')
+
+    if (isLastEqualOperation || isLastPercentOperation){
+      return
+    }
+
     operation = event.target.textContent;
     calculate(event)
+    return
+  } else if (!lastOperation && event.target.textContent === '%'){
     return
   }
 
@@ -134,24 +143,20 @@ function selectOperation(event) {
     number = parseFloat(total) || 0;
     total = '';
   }
-  console.log(`%c${'selectOperation:'}`, `color: ${'#DA70D6'}`);
-  console.log(`selectOperation Средний, prevNumber: ${previousNumber} number: ${number} operation: ${operation}`)
 
   // !isLastSelectOperation нужен чтобы вычисление не выполнялось если мы много раз подряд к примеру нажмем '+'
   // !isLastEqualOperation нужен т.к. если мы последний раз нажали '=', и потом нажали еще например + то вычисление уже выполнено, еще одно сразу же не нужно.
-  if (!isLastSelectOperation && !isLastEqualOperation && operation && operation !== '%'){
+  if (!isLastSelectOperation && !isLastEqualOperation && operation){
 
     // проверка деления на ноль
     if (parseFloat(number) === 0 && operation === '/'){
-      console.log('здесьошибка')
       showErrorText()
       return
     }
 
     calculate(event)
-    console.log('Заходтут')
-    previousNumber = parseFloat(total);
-    number = parseFloat(total);
+    previousNumber = parseFloat(total) || 0;
+    number = parseFloat(total) || 0;
     total = '';
   }
 
@@ -163,9 +168,9 @@ function selectOperation(event) {
   isLastSelectOperation = true;
   isLastEqualOperation = false;
   isLastSelectNumber = false;
+  isLastPercentOperation = false;
 
   changeSizeOfText()
-  console.log(`selectOperation Выход, prevNumber: ${previousNumber} number: ${number} operation: ${operation} isLastEqualOperation: ${isLastEqualOperation}`)
 }
 
 // функция расчета
@@ -175,9 +180,6 @@ function calculate(event) {
   if (isLastError) {
     clear()
   }
-
-  console.log(`%c${'calculate:'}`, `color: ${'#d77332'}`);
-  console.log(`calculate Вход, prevNumber: ${previousNumber} number: ${number} operation: ${operation}`)
 
   if (!operation){
     
@@ -194,7 +196,6 @@ function calculate(event) {
     case '/':
 
       if (parseFloat(number) === 0){
-        console.log('здесьошибка')
         showErrorText()
         return
       }
@@ -230,9 +231,10 @@ function calculate(event) {
 
       // Проверка на то что number не равен нулю
       if (lastOperation === '/' && parseFloat(number)) { 
-        console.log(number)
+        
         total = parseFloat(previousNumber) / (parseFloat(number) / 100);
         fixNumbersAfterDot()
+        
       } else if (lastOperation === '/') {
         showErrorText()
         return
@@ -247,6 +249,8 @@ function calculate(event) {
         total = parseFloat(previousNumber) - parseFloat(previousNumber) * parseFloat(number) / 100
         fixNumbersAfterDot()
       }
+
+      isLastPercentOperation = true;
       break;
 
     default:
@@ -266,8 +270,6 @@ function calculate(event) {
     previousNumber = parseFloat(total);
   }
 
-  console.log(`calculate Выход, prevNumber: ${previousNumber} number: ${number} operation: ${operation} total: ${total}`)
-
   isLastSelectNumber = false;
 
   changeSizeOfText()
@@ -286,6 +288,7 @@ function clear() {
   isLastSelectOperation = false;
   isLastSelectNumber = false;
   isLastError = false;
+  isLastPercentOperation = false;
   errorText.style.display = 'none'
   changeSizeOfText();
 }
@@ -296,7 +299,6 @@ function deleteLastNumber() {
     clear()
   }
 
-  console.log(`deleteLastNum Вход, prevNumber: ${previousNumber} number: ${number} operation: ${operation} total: ${total}`)
   if (isLastSelectNumber) {
     const editNumber = number.toString().slice(0, -1);
     number = parseFloat(editNumber || 0);
@@ -304,8 +306,6 @@ function deleteLastNumber() {
   }
 
   changeSizeOfText()
-
-  console.log(`deleteLastNum Выход, prevNumber: ${previousNumber} number: ${number} operation: ${operation} total: ${total}`)
 }
 
 function updateNodes(operationInp, numberInp, previousNumberInp){
@@ -335,7 +335,6 @@ function changeSizeOfText(){
     numberInput.style.fontSize = "50px";
   };
 
-  console.log('length', resultInput.textContent.length)
   if (resultInput.textContent.length < 8) {
     operationInput.style.fontSize = "70px";
     resultInput.style.fontSize = "70px";
