@@ -74,7 +74,7 @@ function selectNumber(event){
 
   // условие чтобы не было чисел в виде: 030, а было просто 30, но в случае если самый первый знак был '.', то 0 нужно будет добавить спереди.
   if (number === 0 && event.target.textContent !== '.') {
-    number = event.target.textContent
+    number = parseInt(event.target.textContent)
   } else {
     number = number + event.target.textContent;
   }
@@ -162,6 +162,7 @@ function selectOperation(event) {
 
   operation = event.target.textContent;
 
+  changeSizeOfText()
   updateNodes(operation, number, previousNumber || number)
 
   // зашли в выбор операции, переключили все нужные toggle.
@@ -169,8 +170,6 @@ function selectOperation(event) {
   isLastEqualOperation = false;
   isLastSelectNumber = false;
   isLastPercentOperation = false;
-
-  changeSizeOfText()
 }
 
 // функция расчета
@@ -206,6 +205,7 @@ function calculate(event) {
 
     case '*':
       total = parseFloat(previousNumber) * parseFloat(number);
+      console.log(total)
       fixNumbersAfterDot()
       break;
 
@@ -226,6 +226,7 @@ function calculate(event) {
 
       if (lastOperation === '*') {
         total = parseFloat(previousNumber) * (parseFloat(number) / 100);
+
         fixNumbersAfterDot()
       }
 
@@ -358,9 +359,10 @@ function changeSizeOfText(){
 }
 
 function fixNumbersAfterDot(){
+  console.log('тут', total)
   // смотрим сколько количество цифр после запятой у total
   const numsAfterDotTotal = total.toString().split('.')[1]?.length;
-
+  console.log(numsAfterDotTotal)
   if (numsAfterDotTotal >= 1) {
     total = parseFloat(total.toFixed(8))
   }
